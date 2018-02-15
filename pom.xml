@@ -33,6 +33,11 @@
 			<id>TheCentralRepository</id>
 			<url>https://repo1.maven.org/maven2/</url>
 		</repository>
+		<!-- Google Guava -->
+		<repository>
+			<id>Google</id>
+			<url>https://mvnrepository.com/</url>
+		</repository>
 	</repositories>
 	<dependencies>
 		<!--Spigot-API -->
@@ -47,19 +52,33 @@
 			<artifactId>bukkit</artifactId>
 			<version>1.8.8-R0.1-SNAPSHOT</version>
 		</dependency>
-	<!-- PermissionsEx(PEX) -->
-	<dependency>
-    	<groupId>ru.tehkode</groupId>
-    	<artifactId>PermissionsEx</artifactId>
-    	<version>1.23.4</version>
-         <systemPath>${basedir}/lib/PermissionsEx-1.23.4.jar</systemPath>
-        <scope>system</scope>
-    </dependency>
-		<!-- LuckPerms-->
+		<!--CraftBukkit -->
+		<dependency>
+			<groupId>org.bukkit</groupId>
+			<artifactId>craftbukkit</artifactId>
+			<version>1.8.8-R0.1-SNAPSHOT</version>
+			<systemPath>${basedir}/lib/craftbukkit-1.8.8.jar</systemPath>
+			<scope>system</scope>
+		</dependency>
+		<!-- PermissionsEx(PEX) -->
+		<dependency>
+			<groupId>ru.tehkode</groupId>
+			<artifactId>PermissionsEx</artifactId>
+			<version>1.23.4</version>
+			<systemPath>${basedir}/lib/PermissionsEx-1.23.4.jar</systemPath>
+			<scope>system</scope>
+		</dependency>
+		<!-- LuckPerms -->
 		<dependency>
 			<groupId>me.lucko.luckperms</groupId>
 			<artifactId>luckperms-api</artifactId>
 			<version>4.0</version>
+		</dependency>
+		<!-- Google Guava -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>24.0-jre</version>
 		</dependency>
 	</dependencies>
 	<url>http://jaoafa.com/</url>

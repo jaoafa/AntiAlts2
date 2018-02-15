@@ -83,10 +83,10 @@ public class MySQL extends Database {
 			statement.executeQuery("SELECT * FROM chetab LIMIT 1");
 			return statement;
 		} catch (CommunicationsException e){
-			MySQL MySQL = new MySQL("jaoafa.com", "3306", "jaoafa", MyMaid.sqluser, MyMaid.sqlpassword);
+			MySQL MySQL = new MySQL("jaoafa.com", "3306", "jaoafa", AntiAlts2.sqluser, AntiAlts2.sqlpassword);
 			try {
-				MyMaid.c = MySQL.openConnection();
-				statement = MyMaid.c.createStatement();
+				AntiAlts2.c = MySQL.openConnection();
+				statement = AntiAlts2.c.createStatement();
 				return statement;
 			} catch (ClassNotFoundException | SQLException e1) {
 				// TODO 自動生成された catch ブロック
