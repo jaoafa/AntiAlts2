@@ -26,6 +26,25 @@ public class Event_AsyncPreLogin implements Listener {
 	public Event_AsyncPreLogin(JavaPlugin plugin) {
 		this.plugin = plugin;
 	}
+	/*
+	 * ログイン試行
+	 * ↓
+	 * プレイヤーデータがデータベースにあるかどうか、あったらUSERID取得
+	 * ↓
+	 * MinecraftIDの更新の必要があれば更新
+	 * ↓
+	 * プレイヤーデータのラストログインの更新
+	 * ↓
+	 * statusを確認し、falseの場合はログインOK
+	 * ↓
+	 * 同一USERIDをリスト化し、1番目のUUIDに合うかどうか(→合わなければNG)
+	 * ↓
+	 * 同一IPアドレスで非同一UUIDがあるかどうか(SQLで判定せず同一IPアドレスアカウントリスト化してそこから調べる | →あればログインNG, 同一UUIDがなければINSERT)
+	 * ↓
+	 * ログイン許可？
+	 * ↓
+	 * 同一ドメインの非同一UUIDで、48h以内にラストログインしたプレイヤーをリスト化。管理部・モデレーターに出力
+	 */
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onAsyncPreLogin(AsyncPlayerPreLoginEvent event){
 		String name = event.getName();
@@ -46,9 +65,24 @@ public class Event_AsyncPreLogin implements Listener {
 		Statement statement3 = getNewStatement();
 		if(statement3 == null) return;
 
+		UUID uuid = AntiAlts2.getUUID(name);
 		try {
+			ResultSet res = statement.executeQuery("SELECT * FROM antialts WHERE uuid = '" + uuid + "'");
+			if(res.next()){
+				int id = res.getInt("id");
+				if(!res.getString("player").equals(name)){
+					// MinecraftIDが違ったら更新
+					statement2.executeUpdate("UPDATE antialts SET player = '" + name + "' WHERE id = " + id);
+				}
+				statement2.executeUpdate("UPDATE antialts SET lastlogin = CURRENT_TIMESTAMP WHERE id = " + id);
+			}
+
+
+
+
+
+
 			ResultSet res = statement.executeQuery("SELECT * FROM antialts WHERE ip = '" + ip + "'");
-			UUID uuid = AntiAlts2.getUUID(name);
 			while(res.next()){
 				// サブアカウント有り
 				String MainAltID = res.getString("player");
