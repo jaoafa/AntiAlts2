@@ -9,5 +9,5 @@ commands:
    alts:
       description: このプラグインに関する設定や情報が確認できます。
       usage: /<command>
-      permission: periodmatch.period
-permission-message: You do not have permission to perform this command.
+      permission: antialts2.alts
+      permission-message: You do not have permission to perform this command.

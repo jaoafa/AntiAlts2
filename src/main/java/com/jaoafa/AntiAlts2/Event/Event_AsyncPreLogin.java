@@ -154,8 +154,8 @@ public class Event_AsyncPreLogin implements Listener {
 							p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + name + ": サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
 						}
 					}
+					Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + ": サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
 				}
-				Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + ": サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
 				if(count == 0) statement3.executeUpdate("INSERT INTO antialts (player, uuid, userid, ip, host, domain, firstlogin, lastlogin) VALUES ('" + name + "', '" + uuid + "', '" + id + "', '" + ip + "', '" + host + "', '" + domain + "', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
 				return;
 			}
