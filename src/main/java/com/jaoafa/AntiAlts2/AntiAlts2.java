@@ -39,6 +39,7 @@ public class AntiAlts2 extends JavaPlugin {
 		Load_Config(); // Config Load
 	}
 
+	public static String sqlserver = "jaoafa.com";
 	public static String sqluser;
 	public static String sqlpassword;
 	public static Connection c = null;
@@ -67,12 +68,12 @@ public class AntiAlts2 extends JavaPlugin {
 			return;
 		}
 
-		MySQL MySQL;
+
 		if(conf.contains("sqlserver")){
-			MySQL = new MySQL((String) conf.get("sqlserver"), "3306", "jaoafa", sqluser, sqlpassword);
-		}else{
-			MySQL = new MySQL("jaoafa.com", "3306", "jaoafa", sqluser, sqlpassword);
+			sqlserver = (String) conf.get("sqlserver");
 		}
+
+		MySQL MySQL = new MySQL(sqlserver, "3306", "jaoafa", sqluser, sqlpassword);
 
 		try {
 			c = MySQL.openConnection();
