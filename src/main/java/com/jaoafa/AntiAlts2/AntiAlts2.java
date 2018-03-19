@@ -66,7 +66,13 @@ public class AntiAlts2 extends JavaPlugin {
 			getServer().getPluginManager().disablePlugin(this);
 			return;
 		}
-		MySQL MySQL = new MySQL("jaoafa.com", "3306", "jaoafa", sqluser, sqlpassword);
+
+		MySQL MySQL;
+		if(conf.contains("sqlserver")){
+			MySQL = new MySQL((String) conf.get("sqlserver"), "3306", "jaoafa", sqluser, sqlpassword);
+		}else{
+			MySQL = new MySQL("jaoafa.com", "3306", "jaoafa", sqluser, sqlpassword);
+		}
 
 		try {
 			c = MySQL.openConnection();
