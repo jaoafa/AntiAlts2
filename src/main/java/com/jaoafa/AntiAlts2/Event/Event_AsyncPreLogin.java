@@ -177,7 +177,7 @@ public class Event_AsyncPreLogin implements Listener {
 		try {
 			statement = AntiAlts2.c.createStatement();
 		} catch (NullPointerException e) {
-			MySQL MySQL = new MySQL("jaoafa.com", "3306", "jaoafa", AntiAlts2.sqluser, AntiAlts2.sqlpassword);
+			MySQL MySQL = new MySQL(AntiAlts2.sqlserver, "3306", "jaoafa", AntiAlts2.sqluser, AntiAlts2.sqlpassword);
 			try {
 				AntiAlts2.c = MySQL.openConnection();
 				statement = AntiAlts2.c.createStatement();
