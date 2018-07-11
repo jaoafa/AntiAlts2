@@ -1,6 +1,6 @@
-name: AntiAlts2
+name: ${project.artifactId}
 main: com.jaoafa.AntiAlts2.AntiAlts2
-version: 0.0.1
+version: ${project.version}
 description: サブアカウントのログイン関連を制御するプラグイン
 database: true
 softdepend: [PermissionsEx, LuckPerms]
