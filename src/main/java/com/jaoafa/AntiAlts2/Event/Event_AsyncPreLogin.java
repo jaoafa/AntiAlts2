@@ -1,9 +1,11 @@
 package com.jaoafa.AntiAlts2.Event;
 
 import java.net.InetAddress;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -44,7 +46,9 @@ public class Event_AsyncPreLogin implements Listener {
 	 * ↓
 	 * 8. ログイン許可？
 	 * ↓
-	 * 9. 同一ドメインの非同一UUIDで、48h以内にラストログインしたプレイヤーをリスト化。管理部・モデレーターに出力
+	 * 9. 同一IPからログインしてきたプレイヤーリストを管理部・モデレーター・常連に表示(Discordにも。)
+	 * ↓
+	 * 10. 同一ドメインの非同一UUIDで、48h以内にラストログインしたプレイヤーをリスト化。管理部・モデレーターに出力
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onAsyncPreLogin(AsyncPlayerPreLoginEvent event){
@@ -61,6 +65,7 @@ public class Event_AsyncPreLogin implements Listener {
 		plugin.getLogger().info("HOST: " + host);
 		plugin.getLogger().info("DOMAIN: " + domain);
 
+		/*
 		Statement statement = getNewStatement();
 		if(statement == null){
 			event.disallow(Result.KICK_BANNED, "[AntiAlts2] Login Check System Error! DebugNo.1");
@@ -79,6 +84,7 @@ public class Event_AsyncPreLogin implements Listener {
 			Discord.send("293856671799967744", "__**[AntiAlts2]**__ " + name + ": Login Check System Error! DebugNo.3");
 			return;
 		}
+		*/
 
 		UUID uuid = AntiAlts2.getUUID(name);
 		try {
@@ -87,15 +93,22 @@ public class Event_AsyncPreLogin implements Listener {
 			String MainAltUUID = null;
 
 			// 2. プレイヤーデータがデータベースにあるかどうか、あったらUSERID取得
-			ResultSet res = statement.executeQuery("SELECT * FROM antialts WHERE uuid = '" + uuid + "'");
+			PreparedStatement statement = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE uuid = ?");
+			statement.setString(1, uuid.toString());
+			ResultSet res = statement.executeQuery();
 			if(res.next()){
 				int id = res.getInt("userid");
 				if(!res.getString("player").equals(name)){
 					// 3. MinecraftIDの更新の必要があれば更新
-					statement2.executeUpdate("UPDATE antialts SET player = '" + name + "' WHERE uuid = '" + uuid + "'");
+					PreparedStatement statement2 = MySQL.getNewPreparedStatement("UPDATE antialts SET player = ? WHERE uuid = ?");
+					statement2.setString(1, name);
+					statement2.setString(2, uuid.toString());
+					statement2.executeUpdate();
 				}
 				// 4. プレイヤーデータのラストログインの更新
-				statement2.executeUpdate("UPDATE antialts SET lastlogin = CURRENT_TIMESTAMP WHERE uuid = '" + uuid + "'");
+				PreparedStatement statement3 = MySQL.getNewPreparedStatement("UPDATE antialts SET lastlogin = CURRENT_TIMESTAMP WHERE uuid = ?");
+				statement3.setString(1, uuid.toString());
+				statement3.executeUpdate();
 
 				// 5. statusを確認し、falseの場合はログインOK
 				if(!res.getBoolean("status")){
@@ -103,7 +116,9 @@ public class Event_AsyncPreLogin implements Listener {
 				}
 
 				// 6. 同一USERIDをリスト化し、1番目のUUIDに合うかどうか(→合わなければNG)
-				ResultSet userid_res = statement3.executeQuery("SELECT * FROM antialts WHERE userid = " + id + "");
+				PreparedStatement statement4 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE userid = ?");
+				statement4.setInt(1, id);
+				ResultSet userid_res = statement4.executeQuery();
 
 				if(userid_res.next() && !userid_res.getString("uuid").equalsIgnoreCase(uuid.toString())){
 					MainAltID = userid_res.getString("player");
@@ -125,8 +140,14 @@ public class Event_AsyncPreLogin implements Listener {
 			}
 
 			// 7. 同一IPアドレスで非同一UUIDがあるかどうか(SQLで判定せず同一IPアドレスアカウントリスト化してそこから調べる | →あればログインNG, 同一UUIDがなければINSERT
-			ResultSet ips_count = statement2.executeQuery("SELECT COUNT(*) FROM antialts WHERE ip = '" + ip + "' AND uuid = '" + uuid + "'");
-			ResultSet ips_res = statement3.executeQuery("SELECT * FROM antialts WHERE ip = '" + ip + "'");
+			PreparedStatement statement5 = MySQL.getNewPreparedStatement("SELECT COUNT(*) FROM antialts WHERE ip = ? AND uuid = ?");
+			statement5.setString(1, ip);
+			statement5.setString(2, uuid.toString());
+			ResultSet ips_count = statement5.executeQuery();
+
+			PreparedStatement statement6 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE ip = ?");
+			statement5.setString(1, ip);
+			ResultSet ips_res = statement6.executeQuery();
 			boolean insertbool = true;
 			int count = 0;
 			if(ips_count.next()){
@@ -140,7 +161,9 @@ public class Event_AsyncPreLogin implements Listener {
 					insertbool = false;
 					continue;
 				}
-				ResultSet userid_res = statement.executeQuery("SELECT * FROM antialts WHERE userid = " + id + "");
+				PreparedStatement statement7 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE userid = ?");
+				statement7.setString(1, id);
+				ResultSet userid_res = statement7.executeQuery();
 				if(userid_res.next() && !userid_res.getString("uuid").equalsIgnoreCase(uuid.toString())){
 					// サブアカウント？
 					String message = ChatColor.RED + "----- ANTI ALTS -----\n"
@@ -156,43 +179,103 @@ public class Event_AsyncPreLogin implements Listener {
 					}
 					Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + ": サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
 				}
-				if(count == 0) statement3.executeUpdate("INSERT INTO antialts (player, uuid, userid, ip, host, domain, firstlogin, lastlogin) VALUES ('" + name + "', '" + uuid + "', '" + id + "', '" + ip + "', '" + host + "', '" + domain + "', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
+				if(count == 0){
+					PreparedStatement statement8 = MySQL.getNewPreparedStatement("INSERT INTO antialts (player, uuid, userid, ip, host, domain, firstlogin, lastlogin) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
+					statement8.setString(1, name);
+					statement8.setString(2, uuid.toString());
+					statement8.setString(3, id);
+					statement8.setString(4, ip);
+					statement8.setString(5, host);
+					statement8.setString(6, domain);
+					statement8.executeUpdate();
+				}
 				return;
 			}
 
 			if(insertbool){
 				int userid = 0;
-				ResultSet res2 = statement3.executeQuery("SELECT * FROM antialts ORDER BY userid DESC");
+				PreparedStatement statement9 = MySQL.getNewPreparedStatement("SELECT * FROM antialts ORDER BY userid DESC");
+				ResultSet res2 = statement9.executeQuery();
 				if(res2.next()){
 					userid = res2.getInt("userid") + 1;
 				}
-				statement3.executeUpdate("INSERT INTO antialts (player, uuid, userid, ip, host, domain, firstlogin, lastlogin) VALUES ('" + name + "', '" + uuid + "', '" + userid + "', '" + ip + "', '" + host + "', '" + domain + "', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
+				PreparedStatement statement10 = MySQL.getNewPreparedStatement("INSERT INTO antialts (player, uuid, userid, ip, host, domain, firstlogin, lastlogin) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
+				statement10.setString(1, name);
+				statement10.setString(2, uuid.toString());
+				statement10.setInt(3, userid);
+				statement10.setString(4, ip);
+				statement10.setString(5, host);
+				statement10.setString(6, domain);
+				statement10.executeUpdate();
 			}
-		} catch (SQLException e) {
+
+			// 9. 同一IPからログインしてきたプレイヤーリストを管理部・モデレーター・常連に表示(Discordにも。)
+			PreparedStatement statement11 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE ip = ?");
+			statement11.setString(1, ip);
+			ResultSet ips_res_2 = statement11.executeQuery();
+			Set<String> equal_ips = new HashSet<>();
+			while(ips_res_2.next()){
+				String PlayerID = ips_res_2.getString("player");
+				String PlayerUUID = ips_res_2.getString("uuid");
+				if(uuid.toString().equalsIgnoreCase(PlayerUUID)){
+					continue;
+				}
+				equal_ips.add(PlayerID);
+			}
+			if(equal_ips.size() != 0){
+				for(Player p: Bukkit.getServer().getOnlinePlayers()) {
+					String group = PermissionsManager.getPermissionMainGroup(p);
+					if(group.equalsIgnoreCase("Admin") || group.equalsIgnoreCase("Moderator") || group.equalsIgnoreCase("Regular")) {
+						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "|-- " + name + " : - : サブアカウント情報 --|");
+						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "このプレイヤーには、以下、" + equal_ips.size() + "個のアカウントが見つかっています。");
+						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + implode(equal_ips, ", "));
+					}
+				}
+				Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + " : - : サブアカウント情報\n"
+						+ "このプレイヤーには、以下、" + equal_ips.size() + "個のアカウントが見つかっています。\n"
+						+ implode(equal_ips, ", "));
+			}
+
+			// 10. 同一ドメインの非同一UUIDで、48h以内にラストログインしたプレイヤーをリスト化。管理部・モデレーターに出力
+			PreparedStatement statement12 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE domain = ? AND uuid != ? AND DATE_ADD(date, INTERVAL 2 DAY) > NOW()");
+			statement12.setString(1, domain);
+			statement12.setString(2, uuid.toString());
+			ResultSet domains_res = statement12.executeQuery();
+			Set<String> equal_domains = new HashSet<>();
+			while(domains_res.next()){
+				String PlayerID = ips_res_2.getString("player");
+				String PlayerUUID = ips_res_2.getString("uuid");
+				if(uuid.toString().equalsIgnoreCase(PlayerUUID)){
+					continue;
+				}
+				equal_domains.add(PlayerID);
+			}
+			if(equal_domains.size() != 0){
+				for(Player p: Bukkit.getServer().getOnlinePlayers()) {
+					String group = PermissionsManager.getPermissionMainGroup(p);
+					if(group.equalsIgnoreCase("Admin") || group.equalsIgnoreCase("Moderator")) {
+						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "|-- " + name + " : - : 同一ドメイン情報 --|");
+						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "このプレイヤードメインと同一のプレイヤーが" + equal_domains.size() + "個見つかっています。(DOMAIN: " + domain + ")");
+						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + implode(equal_domains, ", "));
+					}
+				}
+			}
+		} catch (SQLException | ClassNotFoundException e) {
 			AntiAlts2.report(e);
 		}
 	}
-	private Statement getNewStatement(){
-		Statement statement;
-		try {
-			statement = AntiAlts2.c.createStatement();
-		} catch (NullPointerException e) {
-			MySQL MySQL = new MySQL(AntiAlts2.sqlserver, "3306", "jaoafa", AntiAlts2.sqluser, AntiAlts2.sqlpassword);
-			try {
-				AntiAlts2.c = MySQL.openConnection();
-				statement = AntiAlts2.c.createStatement();
-			} catch (ClassNotFoundException | SQLException e1) {
-				// TODO 自動生成された catch ブロック
-				e1.printStackTrace();
-				return null;
-			}
-		} catch (SQLException e) {
-			// TODO 自動生成された catch ブロック
-			e.printStackTrace();
-			return null;
-		}
-
-		statement = MySQL.check(statement);
-		return statement;
+	/**
+	 * リストの内容をStringにし、その間にglueを挟んで返す(PHPのimplodeと同等)
+	 * @see https://qiita.com/rkowase/items/7e73468d421c16add76d
+	 * @param list リスト
+	 * @param glue 挟むテキスト
+	 * @return 処理したテキスト
+	 */
+	public static <T> String implode(Set<T> list, String glue) {
+	    StringBuilder sb = new StringBuilder();
+	    for (T e : list) {
+	        sb.append(glue).append(e);
+	    }
+	    return sb.substring(glue.length());
 	}
 }

@@ -43,6 +43,7 @@ public class AntiAlts2 extends JavaPlugin {
 	public static String sqluser;
 	public static String sqlpassword;
 	public static Connection c = null;
+	public static long ConnectionCreate = 0;
 	public static FileConfiguration conf;
 	/**
 	 * コンフィグ読み込み
