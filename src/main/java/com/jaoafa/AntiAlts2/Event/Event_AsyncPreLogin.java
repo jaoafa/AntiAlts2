@@ -58,7 +58,10 @@ public class Event_AsyncPreLogin implements Listener {
 		InetAddress address = event.getAddress();
 		String ip = address.getHostAddress();
 		String host = address.getHostName();
-		String domain = InternetDomainName.from(host).topPrivateDomain().toString();
+		String domain = "null";
+		if(!ip.equalsIgnoreCase(host)){
+			domain = InternetDomainName.from(host).topPrivateDomain().toString();
+		}
 
 		plugin.getLogger().info("Name: " + name);
 		plugin.getLogger().info("IP: " + ip);
@@ -88,7 +91,7 @@ public class Event_AsyncPreLogin implements Listener {
 
 		UUID uuid = AntiAlts2.getUUID(name);
 		try {
-
+			int userid = -1;
 			String MainAltID = null;
 			String MainAltUUID = null;
 
@@ -97,13 +100,26 @@ public class Event_AsyncPreLogin implements Listener {
 			statement.setString(1, uuid.toString());
 			ResultSet res = statement.executeQuery();
 			if(res.next()){
-				int id = res.getInt("userid");
+				userid = res.getInt("userid");
 				if(!res.getString("player").equals(name)){
 					// 3. MinecraftIDの更新の必要があれば更新
+					String oldName = res.getString("player");
+
 					PreparedStatement statement2 = MySQL.getNewPreparedStatement("UPDATE antialts SET player = ? WHERE uuid = ?");
 					statement2.setString(1, name);
 					statement2.setString(2, uuid.toString());
 					statement2.executeUpdate();
+
+					for(Player p: Bukkit.getServer().getOnlinePlayers()) {
+						String group = PermissionsManager.getPermissionMainGroup(p);
+						if(group.equalsIgnoreCase("Admin") || group.equalsIgnoreCase("Moderator") || group.equalsIgnoreCase("Regular")) {
+							p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "|-- " + name + " : - : プレイヤー名変更情報 --|");
+							p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "このプレイヤーは、前回ログインからプレイヤー名を変更しています。(旧名: " + oldName + ")");
+						}
+					}
+					Discord.send("223582668132974594", "__**[AntiAlts2]**__ `" + name + "` : - : プレイヤー名変更情報\n"
+							+ "このプレイヤーは、前回ログインからプレイヤー名を変更しています。(旧名: " + oldName + ")\n"
+							+ "https://ja.namemc.com/profile/" + uuid.toString());
 				}
 				// 4. プレイヤーデータのラストログインの更新
 				PreparedStatement statement3 = MySQL.getNewPreparedStatement("UPDATE antialts SET lastlogin = CURRENT_TIMESTAMP WHERE uuid = ?");
@@ -117,7 +133,7 @@ public class Event_AsyncPreLogin implements Listener {
 
 				// 6. 同一USERIDをリスト化し、1番目のUUIDに合うかどうか(→合わなければNG)
 				PreparedStatement statement4 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE userid = ?");
-				statement4.setInt(1, id);
+				statement4.setInt(1, userid);
 				ResultSet userid_res = statement4.executeQuery();
 
 				if(userid_res.next() && !userid_res.getString("uuid").equalsIgnoreCase(uuid.toString())){
@@ -134,7 +150,7 @@ public class Event_AsyncPreLogin implements Listener {
 							p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + name + ": サブアカウントログイン規制(1 - メイン: " + MainAltID + ")");
 						}
 					}
-					Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + ": サブアカウントログイン規制(1 - メイン: " + MainAltID + ")");
+					Discord.send("223582668132974594", "__**[AntiAlts2]**__ `" + name + "`: サブアカウントログイン規制(1 - メイン: " + MainAltID + ")");
 					return;
 				}
 			}
@@ -146,7 +162,7 @@ public class Event_AsyncPreLogin implements Listener {
 			ResultSet ips_count = statement5.executeQuery();
 
 			PreparedStatement statement6 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE ip = ?");
-			statement5.setString(1, ip);
+			statement6.setString(1, ip);
 			ResultSet ips_res = statement6.executeQuery();
 			boolean insertbool = true;
 			int count = 0;
@@ -177,7 +193,7 @@ public class Event_AsyncPreLogin implements Listener {
 							p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + name + ": サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
 						}
 					}
-					Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + ": サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
+					Discord.send("223582668132974594", "__**[AntiAlts2]**__ `" + name + "`: サブアカウントログイン規制(2 - メイン: " + PlayerID + ")");
 				}
 				if(count == 0){
 					PreparedStatement statement8 = MySQL.getNewPreparedStatement("INSERT INTO antialts (player, uuid, userid, ip, host, domain, firstlogin, lastlogin) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
@@ -193,7 +209,6 @@ public class Event_AsyncPreLogin implements Listener {
 			}
 
 			if(insertbool){
-				int userid = 0;
 				PreparedStatement statement9 = MySQL.getNewPreparedStatement("SELECT * FROM antialts ORDER BY userid DESC");
 				ResultSet res2 = statement9.executeQuery();
 				if(res2.next()){
@@ -209,9 +224,9 @@ public class Event_AsyncPreLogin implements Listener {
 				statement10.executeUpdate();
 			}
 
-			// 9. 同一IPからログインしてきたプレイヤーリストを管理部・モデレーター・常連に表示(Discordにも。)
-			PreparedStatement statement11 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE ip = ?");
-			statement11.setString(1, ip);
+			// 9. 同一ユーザIDのプレイヤーリストを管理部・モデレーター・常連に表示(Discordにも。)
+			PreparedStatement statement11 = MySQL.getNewPreparedStatement("SELECT * FROM antialts WHERE userid = ?");
+			statement11.setInt(1, userid);
 			ResultSet ips_res_2 = statement11.executeQuery();
 			Set<String> equal_ips = new HashSet<>();
 			while(ips_res_2.next()){
@@ -231,7 +246,7 @@ public class Event_AsyncPreLogin implements Listener {
 						p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + implode(equal_ips, ", "));
 					}
 				}
-				Discord.send("223582668132974594", "__**[AntiAlts2]**__ " + name + " : - : サブアカウント情報\n"
+				Discord.send("223582668132974594", "__**[AntiAlts2]**__ `" + name + "` : - : サブアカウント情報\n"
 						+ "このプレイヤーには、以下、" + equal_ips.size() + "個のアカウントが見つかっています。\n"
 						+ implode(equal_ips, ", "));
 			}
@@ -243,8 +258,8 @@ public class Event_AsyncPreLogin implements Listener {
 			ResultSet domains_res = statement12.executeQuery();
 			Set<String> equal_domains = new HashSet<>();
 			while(domains_res.next()){
-				String PlayerID = ips_res_2.getString("player");
-				String PlayerUUID = ips_res_2.getString("uuid");
+				String PlayerID = domains_res.getString("player");
+				String PlayerUUID = domains_res.getString("uuid");
 				if(uuid.toString().equalsIgnoreCase(PlayerUUID)){
 					continue;
 				}
