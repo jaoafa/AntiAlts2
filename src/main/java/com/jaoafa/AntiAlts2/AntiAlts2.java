@@ -45,32 +45,32 @@ public class AntiAlts2 extends JavaPlugin {
 	public static Connection c = null;
 	public static long ConnectionCreate = 0;
 	public static FileConfiguration conf;
+
 	/**
 	 * コンフィグ読み込み
 	 * @author mine_book000
 	 */
-	private void Load_Config(){
+	private void Load_Config() {
 		conf = getConfig();
 
-		if(conf.contains("discordtoken")){
+		if (conf.contains("discordtoken")) {
 			Discord.start(this, conf.getString("discordtoken"));
-		}else{
+		} else {
 			getLogger().info("Discordへの接続に失敗しました。 [conf NotFound]");
 			getLogger().info("Disable AntiAlts2...");
 			getServer().getPluginManager().disablePlugin(this);
 		}
-		if(conf.contains("sqluser") && conf.contains("sqlpassword")){
+		if (conf.contains("sqluser") && conf.contains("sqlpassword")) {
 			AntiAlts2.sqluser = conf.getString("sqluser");
 			AntiAlts2.sqlpassword = conf.getString("sqlpassword");
-		}else{
+		} else {
 			getLogger().info("MySQL Connect err. [conf NotFound]");
 			getLogger().info("Disable AntiAlts2...");
 			getServer().getPluginManager().disablePlugin(this);
 			return;
 		}
 
-
-		if(conf.contains("sqlserver")){
+		if (conf.contains("sqlserver")) {
 			sqlserver = (String) conf.get("sqlserver");
 		}
 
@@ -104,34 +104,33 @@ public class AntiAlts2 extends JavaPlugin {
 
 	}
 
-
 	public static void SendMessage(CommandSender sender, Command cmd, String text) {
 		sender.sendMessage("[AntiAlts2] " + ChatColor.YELLOW + text);
 	}
 
-	public static void report(Throwable exception){
+	public static void report(Throwable exception) {
 		exception.printStackTrace();
-		for(Player p: Bukkit.getServer().getOnlinePlayers()) {
+		for (Player p : Bukkit.getServer().getOnlinePlayers()) {
 			String group = PermissionsManager.getPermissionMainGroup(p);
-			if(group.equalsIgnoreCase("Admin") || group.equalsIgnoreCase("Moderator")) {
+			if (group.equalsIgnoreCase("Admin") || group.equalsIgnoreCase("Moderator")) {
 				p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "AntiAlts2のシステム障害が発生しました。");
 				p.sendMessage("[AntiAlts2] " + ChatColor.GREEN + "エラー: " + exception.getMessage());
 			}
 		}
 		StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        exception.printStackTrace(pw);
-		Discord.send("293856671799967744", "AntiAlts2でエラーが発生しました。" + "\n"
-					+ "```" + sw.toString() + "```\n"
-					+ "Cause: `" + exception.getCause() + "`");
+		PrintWriter pw = new PrintWriter(sw);
+		exception.printStackTrace(pw);
+		Discord.send("618569153422426113", "AntiAlts2でエラーが発生しました。" + "\n"
+				+ "```" + sw.toString() + "```\n"
+				+ "Cause: `" + exception.getCause() + "`");
 	}
 
-	public static UUID getUUID(String name){
+	public static UUID getUUID(String name) {
 		// https://api.mojang.com/users/profiles/minecraft/
 		JSONObject json = getHttpJson("https://api.mojang.com/users/profiles/minecraft/" + name);
-		if(json == null){
+		if (json == null) {
 			return null;
-		}else if(json.containsKey("id")){
+		} else if (json.containsKey("id")) {
 			String uuid_hyphenated = new StringBuilder((String) json.get("id"))
 					.insert(8, "-")
 					.insert(13, "-")
@@ -140,21 +139,21 @@ public class AntiAlts2 extends JavaPlugin {
 					.toString();
 			UUID uuid = UUID.fromString(uuid_hyphenated);
 			return uuid;
-		}else{
+		} else {
 			return null;
 		}
 	}
 
-	private static JSONObject getHttpJson(String address){
+	private static JSONObject getHttpJson(String address) {
 		StringBuilder builder = new StringBuilder();
-		try{
+		try {
 			URL url = new URL(address);
 
-			HttpURLConnection connect = (HttpURLConnection)url.openConnection();
+			HttpURLConnection connect = (HttpURLConnection) url.openConnection();
 			connect.setRequestMethod("GET");
 			connect.connect();
 
-			if(connect.getResponseCode() != HttpURLConnection.HTTP_OK){
+			if (connect.getResponseCode() != HttpURLConnection.HTTP_OK) {
 				InputStream in = connect.getErrorStream();
 
 				BufferedReader reader = new BufferedReader(new InputStreamReader(in));
@@ -186,7 +185,7 @@ public class AntiAlts2 extends JavaPlugin {
 			Object obj = parser.parse(builder.toString());
 			JSONObject json = (JSONObject) obj;
 			return json;
-		}catch(Exception e){
+		} catch (Exception e) {
 			report(e);
 			return null;
 		}
